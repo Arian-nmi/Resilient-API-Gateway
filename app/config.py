@@ -40,6 +40,8 @@ class Settings:
         self.breaker_min_calls = config("GW_BREAKER_MIN_CALLS", default=10, cast=int)
         self.breaker_threshold = config("GW_BREAKER_THRESHOLD", default=0.5, cast=float)
         self.breaker_open_seconds = config("GW_BREAKER_OPEN_SECONDS", default=10.0, cast=float)
+        self.breaker_half_open_probes = config("GW_BREAKER_HALF_OPEN_PROBES", default=3, cast=int)
+        self.panic_concurrency = config("GW_PANIC_CONCURRENCY", default=200, cast=int)
 
         # Redis (shared limiter)
         self.redis_url = config("GW_REDIS_URL", default="redis://localhost:6379/0")
@@ -64,7 +66,12 @@ class Settings:
 
         # Programmatic overrides (used by the test suite, e.g. Settings(backoff_base=0.001)).
         for key, value in overrides.items():
+            if not hasattr(self, key):
+                raise AttributeError(f"Unknown setting: {key}")
             setattr(self, key, value)
-
+        if self.a_rate <= 0 or self.a_burst < 1:
+            raise ValueError("GW_A_RATE and GW_A_BURST must be positive")
+        if self.max_attempts < 1:
+            raise ValueError("GW_MAX_ATTEMPTS must be >= 1")
 
 settings = Settings()

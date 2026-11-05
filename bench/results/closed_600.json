@@ -1,0 +1,33 @@
+{
+  "mode": "closed-loop 600 workers",
+  "duration_s": 60.0,
+  "requests": 4391,
+  "throughput_rps": 73.2,
+  "success_rate_pct": 45.21,
+  "error_rate_pct": 54.79,
+  "status_breakdown": {
+    "200": 1985,
+    "503": 2161,
+    "client_error": 245
+  },
+  "client_skipped_arrivals": 0,
+  "latency_all_ms": {
+    "avg": 8588.0,
+    "p50": 6481.5,
+    "p95": 24258.2,
+    "p99": 35902.4,
+    "max": 63256.3
+  },
+  "latency_success_ms": {
+    "avg": 11719.9,
+    "p50": 10050.6,
+    "p95": 28259.9,
+    "p99": 39667.5
+  },
+  "provider_share_pct": {
+    "a": 57.5,
+    "b": 25.3,
+    "c": 17.2
+  },
+  "avg_attempts": 1.045
+}

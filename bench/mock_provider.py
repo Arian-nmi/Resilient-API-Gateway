@@ -14,6 +14,7 @@ NAME = os.getenv("NAME", "a")
 LMIN, LMAX = float(os.getenv("LMIN", "0.3")), float(os.getenv("LMAX", "1"))
 ERR = float(os.getenv("ERR", "0"))
 RATE = int(os.getenv("RATE", "0"))  # max req/s, 0 = unlimited
+HANG = float(os.getenv("HANG", "0"))  # probability a request hangs 30 s (client-side timeout)
 
 app = FastAPI()
 hits: deque[float] = deque()
@@ -29,6 +30,8 @@ async def process(request: Request):
             return JSONResponse({"error": "rate_limited"}, status_code=429,
                                 headers={"Retry-After": "1"})
         hits.append(now)
+    if random.random() < HANG:
+        await asyncio.sleep(30)
     delay = random.uniform(LMIN, LMAX)
     await asyncio.sleep(delay)
     if random.random() < ERR:

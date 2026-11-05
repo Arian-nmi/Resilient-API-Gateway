@@ -11,7 +11,7 @@ from .config import settings
 from .core.limiter import RedisTokenBucket, TokenBucket
 from .core.router import Router, build_providers
 from .observability.logging import setup_logging
-from .observability.metrics import Metrics
+from .observability.metrics import Metrics, monitor_loop_lag
 from .observability.middleware import TraceIdMiddleware
 from .storage.writer import Writer
 
@@ -45,6 +45,9 @@ async def lifespan(app: FastAPI):
     
     if writer:
         await writer.start()
+        lag_task = asyncio.create_task(monitor_loop_lag(metrics))
+        yield
+        lag_task.cancel() 
     log.info("started")
     yield
     if writer:
