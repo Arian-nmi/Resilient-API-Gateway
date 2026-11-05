@@ -32,21 +32,42 @@ class Provider:
     limiter: object | None = None    # TokenBucket or RedisTokenBucket (async acquire/penalty)
     ewma_latency: float = 1.0
     inflight: int = 0
+    panic_concurrency: int = 200     # cap for last-resort calls through an OPEN breaker
+    panic_inflight: int = 0
+    last_denied: str | None = None   # why the most recent try_enter() refused: concurrency | breaker | rate_limit
 
-    async def try_enter(self) -> bool:
-        """Non-blocking admission: concurrency cap, circuit breaker, rate limit.
-        The slot is reserved *before* awaiting Redis so concurrent tasks can't overshoot the cap."""
+    async def try_enter(self, panic: bool = False) -> str | None:
+        """Non-blocking admission. Returns None (refused), "normal" or "panic".
+
+        Checks, in order: concurrency cap, circuit breaker, rate limit. The slot is reserved
+        *before* awaiting Redis so concurrent tasks can't overshoot the cap.
+
+        panic=True is the last-resort path: when nothing else can take the request, a provider
+        whose breaker is OPEN may still be used, up to `panic_concurrency` calls at a time.
+        Refusing outright gives a 0% success rate; a degraded provider usually still answers most calls.
+        """
         if self.inflight >= self.max_concurrency:
-            return False
+            self.last_denied = "concurrency"
+            return None
         self.inflight += 1
+        mode = "normal"
         if not self.breaker.allow():
-            self.inflight -= 1
-            return False
+            if panic and self.breaker.state == "open" and self.panic_inflight < self.panic_concurrency:
+                mode = "panic"
+                self.panic_inflight += 1
+            else:
+                self.inflight -= 1
+                self.last_denied = "panic_cap" if (panic and self.breaker.state == "open") else "breaker"
+                return None
         if self.limiter is not None and not await self.limiter.acquire():
             self.breaker.neutral()  # release a half-open probe slot we did not use
             self.inflight -= 1
-            return False
-        return True
+            if mode == "panic":
+                self.panic_inflight -= 1
+            self.last_denied = "rate_limit"
+            return None
+        self.last_denied = None
+        return mode
 
     def observe(self, seconds: float) -> None:
         self.ewma_latency = 0.8 * self.ewma_latency + 0.2 * seconds

@@ -1,0 +1,32 @@
+{
+  "mode": "open-loop 50.0 rps",
+  "duration_s": 60.0,
+  "requests": 3000,
+  "throughput_rps": 50.0,
+  "success_rate_pct": 72.03,
+  "error_rate_pct": 27.97,
+  "status_breakdown": {
+    "200": 2161,
+    "503": 839
+  },
+  "client_skipped_arrivals": 0,
+  "latency_all_ms": {
+    "avg": 4120.0,
+    "p50": 2377.3,
+    "p95": 12895.0,
+    "p99": 16800.9,
+    "max": 27374.3
+  },
+  "latency_success_ms": {
+    "avg": 3629.9,
+    "p50": 1445.7,
+    "p95": 12198.5,
+    "p99": 16861.9
+  },
+  "provider_share_pct": {
+    "a": 63.4,
+    "b": 10.5,
+    "c": 26.1
+  },
+  "avg_attempts": 1.067
+}

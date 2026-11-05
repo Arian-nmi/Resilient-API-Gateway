@@ -2,7 +2,7 @@ import time
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import APIRouter, Body, Request, Response
+from fastapi import APIRouter, Body, Request, Response, Header
 from fastapi.responses import JSONResponse
 
 from ..core.router import AllProvidersFailed
@@ -16,8 +16,19 @@ def _reject(request: Request, status: int, error: str, outcome: str) -> JSONResp
                         status_code=status, headers={"Retry-After": "1"})
 
 
-@router.post("/v1/process")
-async def process(request: Request, body: Any = Body(default=None)):
+@router.post(
+    "/v1/process",
+    summary="Proxy a request to the best available provider",
+    responses={
+        429: {"description": "Our own ingress rate limit exceeded (Retry-After: 1)"},
+        503: {"description": "Overloaded, or every provider unavailable (Retry-After: 1)"},
+    },
+)
+async def process(
+    request: Request,
+    body: Any = Body(default=None, examples=[{"order_id": 1, "amount": 100, "currency": "USD"}]),
+    x_trace_id: str | None = Header(default=None, description="Optional trace id; generated if absent"),
+):
     st = request.app.state
     m = st.metrics
     trace_id = request.state.trace_id
